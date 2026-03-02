@@ -214,16 +214,7 @@ class ChordConverter:
         return None
 
 class BluesToolkit:
-    def __init__(self):
-        self.blues_scales = {
-            "Minor Blues": [0, 3, 5, 6, 7, 10],
-            "Major Blues": [0, 2, 3, 4, 7, 9],
-            "Mixolydian Blues": [0, 2, 3, 4, 5, 7, 9, 10],
-            "Lydian Dominant": [0, 2, 4, 6, 7, 9, 10],
-            "Major Pentatonic": [0, 2, 4, 7, 9],
-            "Minor Pentatonic": [0, 3, 5, 7, 10],
-        }
-        
+    def __init__(self):        
         self.scale_metadata = {
             "Minor Blues": {"intervals": [0, 3, 5, 6, 7, 10], "blue_notes": [3, 6, 10]},
             "Major Blues": {"intervals": [0, 2, 3, 4, 7, 9], "blue_notes": [3]},
@@ -256,7 +247,7 @@ class BluesToolkit:
     def _calculate_scale_notes(self, root, scale_name):
         """Calculate the specific notes based on the root and scale name"""
         converter = ChordConverter()
-        if scale_name not in self.blues_scales:
+        if scale_name not in self.scale_metadata['intervals']:
             return []
         
         root_idx = converter.note_to_idx[root]
