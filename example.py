@@ -1,4 +1,4 @@
-from jazz_compass import ChordConverter, CSTAnalyzer, LCCAnalyzer, JazzBrain
+from jazz_compass import ChordConverter, CSTAnalyzer, LCCAnalyzer, JazzBrain, BluesToolkit
 
 if __name__ == "__main__":
     # --- Test Run ---
@@ -75,3 +75,25 @@ if __name__ == "__main__":
     
     harmonic_minor_test = ["Am(maj7)", "E7b9", "Am6"]
     print(jazz_brain.find_key_center_pro(harmonic_minor_test))
+
+    blues = BluesToolkit()
+    sug = blues.suggest_for_chord("C7")
+    print(f"----- C7 -----")
+    print(sug)
+    sug2 = blues.suggest_advanced(['C', 'E', 'G', 'B'])
+    print(f"----- ['C', 'E', 'G', 'B'] -----")
+    print(sug2)
+
+    # 获取带听感分析的建议
+    chord = 'G7'
+    results = blues.suggest_with_feel(chord)
+
+    print("\n--- Improvisation Feel Report ---")
+    for r in results:
+        f = r['feel']
+        print(f"Scale: {r['scale']}")
+        print(f"  Notes: {r['notes']}")
+        print(f"  Feel : {f['feeling']} (Spiciness: {f['spiciness_level']})")
+        print(f"  Info : {f['description']}")
+        print(f"  Tension Source: {f['tension_notes']}")
+        print("-" * 40)

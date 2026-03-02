@@ -117,7 +117,7 @@ class ChordConverter:
     def parse(self, input_str: str) -> set:
         """Convenience method to directly get note names from input string"""
         result = self.parse_and_get_notes(input_str)
-        if isinstance(result, str): # 错误处理
+        if isinstance(result, str):
             return result
         return result["notes"]
 
@@ -202,6 +202,208 @@ class ChordConverter:
             "offsets": abs_indices,
             "is_slash": False
         }
+    
+    def _ensure_notes_and_root(self, chord_input):
+        """Unify input processing: Return (list of notes, root note)"""
+        if isinstance(chord_input, str):
+            data = self.parse_and_get_notes(chord_input)
+            return data["notes"]
+        elif isinstance(chord_input, (list, set, tuple)):
+            notes = list(chord_input)
+            return notes
+        return None
+
+class BluesToolkit:
+    def __init__(self):
+        self.blues_scales = {
+            "Minor Blues": [0, 3, 5, 6, 7, 10],
+            "Major Blues": [0, 2, 3, 4, 7, 9],
+            "Mixolydian Blues": [0, 2, 3, 4, 5, 7, 9, 10],
+            "Lydian Dominant": [0, 2, 4, 6, 7, 9, 10],
+            "Major Pentatonic": [0, 2, 4, 7, 9],
+            "Minor Pentatonic": [0, 3, 5, 7, 10],
+        }
+        
+        self.scale_metadata = {
+            "Minor Blues": {"intervals": [0, 3, 5, 6, 7, 10], "blue_notes": [3, 6, 10]},
+            "Major Blues": {"intervals": [0, 2, 3, 4, 7, 9], "blue_notes": [3]},
+            "Mixolydian Blues": {"intervals": [0, 2, 3, 4, 5, 7, 9, 10], "blue_notes": [3, 10]},
+            "Lydian Dominant": {"intervals": [0, 2, 4, 6, 7, 9, 10], "blue_notes": [6]},
+            "Major Pentatonic": {"intervals": [0, 2, 4, 7, 9], "blue_notes": []},
+            "Minor Pentatonic": {"intervals": [0, 3, 5, 7, 10], "blue_notes": []},
+        }
+    
+    def _get_scale_details(self, root, scale_name, chord_offsets):
+        """Enhanced version: Calculate the notes and label their relationship to the chord."""
+        converter = ChordConverter()
+        meta = self.scale_metadata.get(scale_name, {"intervals": []})
+        root_idx = converter.note_to_idx[root]
+        
+        detailed_notes = []
+        for i in meta["intervals"]:
+            note_name = converter.idx_to_note[(root_idx + i) % 12]
+            tags = []
+            if i in meta.get("blue_notes", []): tags.append("BLUE")
+            if i in chord_offsets: tags.append("CHORD_TONE")
+            else: tags.append("TENSION")
+            
+            detailed_notes.append({
+                "note": note_name,
+                "role": "/".join(tags)
+            })
+        return detailed_notes
+
+    def _calculate_scale_notes(self, root, scale_name):
+        """Calculate the specific notes based on the root and scale name"""
+        converter = ChordConverter()
+        if scale_name not in self.blues_scales:
+            return []
+        
+        root_idx = converter.note_to_idx[root]
+        intervals = self.scale_metadata[scale_name]["intervals"]
+        
+        # Convert to specific note names
+        return [converter.idx_to_note[(root_idx + i) % 12] for i in intervals]
+
+    def suggest_for_chord(self, chord_input):
+        """
+        Recommend a tonal scale, including the specific notes.
+        Return format: [(scale name, reason, list of notes)]
+        """
+        converter = ChordConverter()
+        notes = converter._ensure_notes_and_root(chord_input)
+        if not notes: return []
+            
+        root = notes[0]
+        root_idx = converter.note_to_idx[root]
+        chord_offsets = set([(converter.note_to_idx[n] - root_idx) % 12 for n in notes])
+        
+        # Relative minor root
+        rel_minor_root = converter.idx_to_note[(root_idx - 3) % 12]
+        
+        raw_suggestions = []
+        
+        # Logical judgment
+        has_major_3rd = 4 in chord_offsets
+        has_b7 = 10 in chord_offsets
+        has_minor_3rd = 3 in chord_offsets
+
+        if has_major_3rd and has_b7:
+            raw_suggestions.append((root, "Mixolydian Blues", "Parallel: Classic jazz-blues sound"))
+            raw_suggestions.append((root, "Minor Blues", "Parallel: 'Blue' tension over major chord"))
+            raw_suggestions.append((rel_minor_root, "Minor Pentatonic", "Relative: Sweet country-blues color"))
+        elif has_minor_3rd:
+            raw_suggestions.append((root, "Minor Blues", "Parallel: Standard minor blues"))
+            raw_suggestions.append((root, "Minor Pentatonic", "Parallel: Pure minor sound"))
+        else:
+            raw_suggestions.append((root, "Major Pentatonic", "Neutral: Bright and open"))
+
+        # Package the final result, including a preview of the notes.
+        results = []
+        for s_root, s_type, reason in raw_suggestions:
+            scale_notes = self._calculate_scale_notes(s_root, s_type)
+            results.append({
+                "name": f"{s_root} {s_type}",
+                "reason": reason,
+                "notes": scale_notes
+            })
+        return results
+
+    def suggest_advanced(self, chord_input):
+        """
+        In addition to the basic recommendation, add an 'advanced alternative' pentatonic scale.
+        For example, on Cmaj7, recommend G Major Pentatonic to obtain a #11 (Lydian) color.
+        """
+        converter = ChordConverter()
+        notes = converter._ensure_notes_and_root(chord_input)
+        root = notes[0]
+        root_idx = converter.note_to_idx[root]
+        chord_offsets = set([(converter.note_to_idx[n] - root_idx) % 12 for n in notes])
+        
+        recommendations = self.suggest_for_chord(chord_input) # Retrieve your existing basic recommendations
+
+        # --- Adding advanced jazz pentatonic substitution logic ---
+        # 1. Major 7th chord
+        if 11 in chord_offsets:
+            # Recommend the major pentatonic starting from the fifth (Cmaj7 play G Pent) -> yields 9, #11, 13
+            g_root = converter.idx_to_note[(root_idx + 7) % 12]
+            recommendations.append({
+                "name": f"{g_root} Major Pentatonic",
+                "reason": "Substitution: Provides Lydian (#11) color",
+                "notes": self._calculate_scale_notes(g_root, "Major Pentatonic")
+            })
+
+        # 2. Minor 7th chord
+        elif 3 in chord_offsets and 10 in chord_offsets:
+            # Recommend the major pentatonic starting from the minor third (Am7 play C Pent) -> yields natural minor color
+            b3_root = converter.idx_to_note[(root_idx + 3) % 12]
+            recommendations.append({
+                "name": f"{b3_root} Major Pentatonic",
+                "reason": "Substitution: Smooth Aeolian texture",
+                "notes": self._calculate_scale_notes(b3_root, "Major Pentatonic")
+            })
+
+        return recommendations
+    
+    def analyze_improv_feel(self, scale_notes, chord_notes):
+        """
+        Analyze the perceived style of a scale over a specific chord.
+        scale_notes: List of notes in the recommended scale
+        chord_notes: List of notes in the current chord
+        """
+        scale_set = set(scale_notes)
+        chord_set = set(chord_notes)
+        
+        # 1. Identify the 'tension notes' in the scale (notes not in the chord)
+        tensions = scale_set - chord_set
+        # 2. Calculate the tension ratio
+        tension_score = len(tensions)
+        
+        # 3. Rating logic
+        if tension_score <= 1:
+            feeling = "Safe & Sweet"
+            description = "Consonant sound, perfect for pop and folk blues."
+        elif tension_score <= 3:
+            feeling = "Soulful & Balanced"
+            description = "Classic blues feel with a good balance of tension and release."
+        elif tension_score <= 5:
+            feeling = "Spicy & Jazzy"
+            description = "High tension, characteristic of bebop and modern jazz blues."
+        else:
+            feeling = "Experimental / Outside"
+            description = "Very crunchy, creates strong dissonant colors."
+
+        return {
+            "feeling": feeling,
+            "spiciness_level": tension_score,
+            "description": description,
+            "tension_notes": list(tensions)
+        }
+
+    def suggest_with_feel(self, chord_input):
+        """Complete recommendation with perceptual analysis"""
+        converter = ChordConverter()
+        notes = converter._ensure_notes_and_root(chord_input) #
+        root = notes[0]
+        
+        # Assume here we recommend several different styles.
+        suggestions = [
+            (root, "Major Pentatonic"),
+            (root, "Minor Blues"),
+            (root, "Lydian Dominant")
+        ]
+        
+        report = []
+        for s_root, s_name in suggestions:
+            if s_name in self.scale_metadata:
+                s_notes = self._calculate_scale_notes(s_root, s_name)
+                feel = self.analyze_improv_feel(s_notes, notes)
+                report.append({
+                    "scale": f"{s_root} {s_name}",
+                    "notes": s_notes,
+                    "feel": feel
+                })
+        return report
 
 class CSTAnalyzer:
     def __init__(self):
@@ -493,16 +695,7 @@ class JazzBrain:
         self.converter = ChordConverter()
         self.cst = CSTAnalyzer()
         self.lcc = LCCAnalyzer()
-    
-    def _ensure_notes_and_root(self, chord_input):
-        """统一处理输入：返回 (音符列表, 根音)"""
-        if isinstance(chord_input, str):
-            data = self.converter.parse_and_get_notes(chord_input)
-            return data["notes"]
-        elif isinstance(chord_input, (list, set, tuple)):
-            notes = list(chord_input)
-            return notes
-        return None
+        self.blues = BluesToolkit()
 
     def get_advice(self, *args):
         """Given a chord string (e.g., 'G7', 'F#m7b5', 'Bbmaj9'), provide improvisation advice based on both CST and LCC analyses"""
@@ -510,7 +703,7 @@ class JazzBrain:
         chords_notes = []
         if isinstance(args[0], str):
             chord_str = args[0]
-            chords_notes = self._ensure_notes_and_root(chord_str)
+            chords_notes = self.converter._ensure_notes_and_root(chord_str)
         elif isinstance(args[0], list) or isinstance(args[0], set) or isinstance(args[0], tuple):
             chord_str = "Custom Chord"
             chords_notes = list(args[0])
@@ -539,8 +732,8 @@ class JazzBrain:
             # Simple ii-V-I detection logic (based on root relationships)
             if i < len(progression) - 1:
                 next_chord = progression[i+1]
-                chords_root_current = self._ensure_notes_and_root(current)[0]
-                chords_root_next = self._ensure_notes_and_root(next_chord)[0]
+                chords_root_current = self.converter._ensure_notes_and_root(current)[0]
+                chords_root_next = self.converter._ensure_notes_and_root(next_chord)[0]
                 
                 # Get root note index
                 r1 = self.converter.note_to_idx[chords_root_current]
@@ -553,7 +746,7 @@ class JazzBrain:
     # --- Automatic voicing generator (Voicing Generator) ---
     def get_voicing(self, chord, v_type="shell"):
         """Generate voicings in a specific style"""
-        notes = self._ensure_notes_and_root(chord)
+        notes = self.converter._ensure_notes_and_root(chord)
         
         if v_type == "shell":
             # Shell Voicing: Root + 3rd + 7th
@@ -566,23 +759,48 @@ class JazzBrain:
         return notes
 
     # --- Color substitution suggestions (Substitution) ---
-    def get_substitutions(self, chord_str: str):
-        """Suggest chord substitutions"""
-        data = self.converter.parse_and_get_notes(chord_str)
-        root = data["notes"][0]
+    def get_substitutions(self, chord_input):
+        """
+        Suggest chord substitutions based on chord intervals.
+        Supports both string (e.g., 'G7') and list (e.g., ['G', 'B', 'D', 'F']).
+        """
+        # 1. Uniformly parse notes and extract the root
+        notes = self.converter._ensure_notes_and_root(chord_input)
+        if not notes:
+            return []
+            
+        root = notes[0]
+        root_idx = self.converter.note_to_idx[root]
+        
+        # 2. Calculate the semitone offset relative to the root note for attribute determination
+        offsets = set([(self.converter.note_to_idx[n] - root_idx) % 12 for n in notes])
         subs = []
         
-        # Tritone substitution - dominant seventh chords only
-        if "7" in chord_str and "maj7" not in chord_str:
-            tritone_root_idx = (self.converter.note_to_idx[root] + 6) % 12
+        # Determine the characteristic notes
+        has_major_3rd = 4 in offsets
+        has_minor_3rd = 3 in offsets
+        has_b7 = 10 in offsets
+        has_maj7 = 11 in offsets
+
+        # --- Tritone Substitution ---
+        # Logic: Must contain a tritone (Dominant 7th characteristic: major third + minor seventh)
+        if has_major_3rd and has_b7:
+            tritone_root_idx = (root_idx + 6) % 12
             tritone_root = self.converter.idx_to_note[tritone_root_idx]
             subs.append({"name": f"{tritone_root}7", "type": "Tritone Sub"})
             
-        # Relative major/minor substitution
-        if "m" in chord_str:
-            rel_root_idx = (self.converter.note_to_idx[root] + 3) % 12
+        # --- Relative Major/Minor Substitution ---
+        # Logic: If it's a minor chord (contains a minor third), recommend its relative major
+        if has_minor_3rd:
+            rel_root_idx = (root_idx + 3) % 12
             rel_root = self.converter.idx_to_note[rel_root_idx]
             subs.append({"name": f"{rel_root}maj7", "type": "Relative Major Sub"})
+            
+        # Logic: If it's a major chord (contains a major third), recommend its relative minor.
+        elif has_major_3rd:
+            rel_root_idx = (root_idx - 3) % 12
+            rel_root = self.converter.idx_to_note[rel_root_idx]
+            subs.append({"name": f"{rel_root}m7", "type": "Relative Minor Sub"})
             
         return subs
 
@@ -605,7 +823,7 @@ class JazzBrain:
     # --- Enhanced Advice ---
     def get_full_report(self, chord_str: str):
         print(f"=== {chord_str} Jazz Report ===")
-        notes = self._ensure_notes_and_root(chord_str)
+        notes = self.converter._ensure_notes_and_root(chord_str)
         
         # Visualization
         self.draw_piano(notes)
@@ -629,7 +847,7 @@ class JazzBrain:
         """Find the most fitting key center for the entire progression"""
         all_notes = set()
         for c in progression:
-            notes = self._ensure_notes_and_root(c)
+            notes = self.converter._ensure_notes_and_root(c)
             if notes: 
                 all_notes.update(notes)
         
@@ -655,7 +873,7 @@ class JazzBrain:
         chord_names = []
         
         for c in progression:
-            notes = self._ensure_notes_and_root(c)
+            notes = self.converter._ensure_notes_and_root(c)
             root = notes[0] if notes else None
             if notes:
                 all_notes.update(notes)
@@ -719,7 +937,7 @@ class JazzBrain:
         """Calculate the 3rd and 7th voice leading paths between chords"""
         path = []
         for c in progression:
-            notes = self._ensure_notes_and_root(c)
+            notes = self.converter._ensure_notes_and_root(c)
             if len(notes) >= 3:
                 # Jazz guide tones are usually the 2nd and 4th notes (the 3rd and 7th)
                 guide = [notes[1], notes[3] if len(notes) > 3 else notes[-1]]
@@ -732,7 +950,7 @@ class JazzBrain:
         # Core logic: Based on the C-G axis, mapping relationships are C→G, G→C, D→F, F→D, etc.
         # In the chromatic scale, the C-G axis center point is 3.5 (between E and Eb)
         axis_val = self.converter.note_to_idx[axis] + 3.5
-        notes = self._ensure_notes_and_root(chord_input)
+        notes = self.converter._ensure_notes_and_root(chord_input)
         
         neg_notes = []
         for n in notes:
@@ -745,7 +963,7 @@ class JazzBrain:
     # --- Rhythmic Comping ---
     def get_rhythmic_voicing(self, chord_input, style="Charleston"):
         """Generate rhythmic syncopation for chords"""
-        notes, _ = self._ensure_notes_and_root(chord_input)
+        notes, _ = self.converter._ensure_notes_and_root(chord_input)
         # Simple Shell Voicing extraction
         v = [notes[0], notes[1], notes[2] if len(notes) > 2 else notes[-1]]
         
