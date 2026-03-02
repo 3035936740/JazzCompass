@@ -2,7 +2,7 @@
 
 **The Digital Grimoire for Jazz Theory and Improvisation.**
 
-`jazz_compass.py` is a comprehensive Python-based harmonic engine designed for jazz musicians, composers, and software developers. It bridges the gap between traditional music theory and algorithmic analysis, providing tools for **Chord-Scale Theory (CST)**, **Lydian Chromatic Concept (LCC)**, **Negative Harmony**, and **Functional Progression Analysis**.
+`jazz_compass.py` is a comprehensive Python-based harmonic engine designed for jazz musicians, composers, and software developers. It bridges the gap between traditional music theory and algorithmic analysis, providing tools for **Chord-Scale Theory (CST)**, **Lydian Chromatic Concept (LCC)**, **Blues Toolkit**, **Negative Harmony**, and **Functional Progression Analysis**.
 
 ---
 
