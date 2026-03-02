@@ -25,11 +25,11 @@
 * **Gravitational Logic**: Implements George Russell's LCC to find "Parent Lydian" scales.
 * **Ingoing vs. Outgoing**: Ranks improvisation options by their "tonal gravity," allowing for both consonant and "outside" modern sounds.
 
-### 4. Professional Key Center Analysis (`KeyCenterPro`)
+### 4. Blues Toolkit (`BluesToolkit`)
 
-* **Functional Awareness**: Unlike simple pitch-matchers, this engine recognizes $ii-V-I$ resolutions and dominant-tonic relationships.
-* **Passing Chord Detection**: Corrects for "Passing Diminished" chords and chromaticism that often confuse basic algorithms.
-* **The Third Rule**: Implements hard constraints on major/minor thirds to ensure modal accuracy.
+* **Core Features**: Intelligent Scale Recommendation: Recommends parallel or relative scales based on a chord's characteristic notes (such as major third, minor seventh, #11, etc.). Supports various jazz-blues colors including Lydian Dominant, Mixolydian Blues, and Minor Blues.
+* **Specific Note Generation**: Automatically translates scale theory into concrete lists of notes, making it easy for musicians to locate the notes directly on their fretboard or keyboard.
+* **Tonal Color Analysis (analyze_improv_feel)**: Automatically calculates a "spiciness level" (from safe to experimental) by comparing the scale notes with the chord notes, and highlights the "tension notes" that create friction.
 
 ### 5. Harmonic Transformation & Voicing
 
