@@ -84,7 +84,6 @@ if __name__ == "__main__":
     print(f"----- ['C', 'E', 'G', 'B'] -----")
     print(sug2)
 
-    # 获取带听感分析的建议
     chord = 'G7'
     results = blues.suggest_with_feel(chord)
 
