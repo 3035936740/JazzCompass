@@ -1,4 +1,4 @@
-from jazz_compass import ChordConverter, CSTAnalyzer, LCCAnalyzer, JazzBrain, BluesToolkit
+from jazz_compass import ChordConverter, CSTAnalyzer, LCCAnalyzer, JazzBrain, BluesToolkit, EnhancedChordConverter
 
 if __name__ == "__main__":
     # --- Test Run ---
@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     print("Tonal Center / Key Center:", jazz_brain.find_key_center(prog))
 
-    print("Negative Harmony Dm7:", jazz_brain.to_negative("Dm7"))
+    print("Negative Harmony Dm7:", jazz_brain.to_negative("Dm7", "C"))
 
     print("Guide Tone Line:", jazz_brain.get_guide_tone_path(prog))
 
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     test_1 = ["Cmaj7", "Ebdim7", "Dm7", "G7"]
     print(jazz_brain.find_key_center_pro(test_1))
     
-    jazz_minor_test = ["Cm6", "F7", "Bbmaj7"]
+    jazz_minor_test = ["Cm6", ['C', 'Eb', 'F', 'A'], "Bbmaj7"]
     print(jazz_brain.find_key_center_pro(jazz_minor_test))
     
     diminished_test = ["Bdim7", "Ddim7", "Fdim7", "Abdim7"]
@@ -96,3 +96,28 @@ if __name__ == "__main__":
         print(f"  Info : {f['description']}")
         print(f"  Tension Source: {f['tension_notes']}")
         print("-" * 40)
+        
+    # 实例化转换器
+    converter = EnhancedChordConverter()
+
+    # 测试用例列表：展示各种组合语法
+    test_cases = [
+        "Cmaj",                 # 标准大三和弦 (C-E-G)
+        "C add b7",             # 大三和弦外加小七度 (C-E-G-Bb)
+        "Cm add 9 omit 5",      # 小三和弦加九音，省略五音 (C-Eb-D)
+        "G7 add #11",           # 属七和弦加增十一音 (G-B-D-F-C#)
+        "A omit 3 add 4",       # 挂留四度和弦的一种写法 (A-D-E)
+        "Eb maj7 add 13 omit 5" # 大七和弦加十三音，省略五音 (Eb-G-D-C)
+    ]
+
+    print(f"{'Input String':<25} | {'Notes Contained':<25} | {'Semitone Offsets'}")
+    print("-" * 75)
+
+    for chord_str in test_cases:
+        try:
+            result = converter.parse_and_get_notes(chord_str)
+            notes_str = ", ".join(result["notes"])
+            offsets_str = str(result["offsets"])
+            print(f"{chord_str:<25} | {notes_str:<25} | {offsets_str}")
+        except Exception as e:
+            print(f"{chord_str:<25} | Error: {e}")

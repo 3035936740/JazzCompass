@@ -216,6 +216,96 @@ class ChordConverter:
             return notes
         return None
 
+class EnhancedChordConverter(ChordConverter):
+    def __init__(self):
+        super().__init__()
+        self.interval_map = {
+            '1': 0, 'b2': 1, '2b': 1, '2': 2, '#2': 3, '2#': 3, 'b3': 3, '3b': 3, '3': 4,
+            '4': 5, '#4': 6, '4#': 6, 'b5': 6, '5b': 6, '5': 7, '#5': 8, '5#': 8, 'b6': 8, '6b': 8,
+            '6': 9, 'bb7': 9, '7bb': 9, '#6': 10, '6#': 10, 'b7': 10, '7b': 10, '7': 11, 'maj7': 11, '7maj': 11,
+            '9': 14, 'b9': 13, '9b': 13, '#9': 15, '9#': 15, '11': 17, '#11': 18, '11#': 18, '13': 21, 'b13': 20, '13b': 20
+        }
+
+    def parse_and_get_notes(self, input_str: str):
+        if "/" in input_str:
+            return self.parse_slash_chord(input_str)
+
+        # 1. Extract the root note (A-G + #/b)
+        root_match = re.match(r"^([A-G][#b]?)", input_str)
+        if not root_match:
+            raise ValueError(f"Invalid root in: {input_str}")
+        
+        root = root_match.group(1)
+        remaining = input_str[len(root):]
+
+        # 2. Extract modifiers (add/omit)
+        # Use regex to extract add/omit and the content following them
+        modifiers = re.findall(r"(add|omit)\s*([#b]?\d+)", remaining)
+        
+        # 3. Determine the main chord type (the basic type is the part after the root and before any modifiers)
+        # For example, "Cm add9" -> the main part is "m"
+        main_type_part = re.split(r"add|omit", remaining)[0].strip()
+        if not main_type_part:
+            main_type_part = "maj"
+        
+        # Get the initial offset
+        offsets = list(self.chord_formulas.get(main_type_part, [0, 4, 7]))
+
+        # 4. Process modifiers
+        for action, interval in modifiers:
+            # Standardize the interval format, for example 7b -> b7
+            norm_interval = self._normalize_interval(interval)
+            semitone = self.interval_map.get(norm_interval)
+            
+            if semitone is None:
+                continue
+
+            if action == "add":
+                if semitone not in [o % 12 for o in offsets]:
+                    offsets.append(semitone)
+            elif action == "omit":
+                # Remove all duplicate notes within the octave
+                offsets = [o for o in offsets if o % 12 != semitone % 12]
+
+        return self._build_result(root, main_type_part, offsets, input_str)
+
+    def _normalize_interval(self, interval: str):
+        """Convert 7b to b7, leave #11 unchanged"""
+        if len(interval) > 1 and interval[-1] in ['#', 'b']:
+            return interval[-1] + interval[:-1]
+        return interval
+
+    def _build_result(self, root, chord_type, offsets, original_str):
+        root_idx = self.note_to_idx[root]
+        
+        unique_abs_indices = set((root_idx + o) % 12 for o in offsets)
+        
+        if root_idx in unique_abs_indices:
+            unique_abs_indices.remove(root_idx)
+        
+        sorted_others = sorted(list(unique_abs_indices))
+        
+        final_abs_indices = [root_idx] + sorted_others
+        
+        note_names = [self.idx_to_note[i] for i in final_abs_indices]
+        
+        return {
+            "chord": original_str,
+            "notes": note_names,
+            "offsets": final_abs_indices,
+            "is_slash": False
+        }
+
+    def _ensure_notes_and_root(self, chord_input):
+        """Unify input processing: Return (list of notes, root note)"""
+        if isinstance(chord_input, str):
+            data = self.parse_and_get_notes(chord_input)
+            return data["notes"]
+        elif isinstance(chord_input, (list, set, tuple)):
+            notes = list(chord_input)
+            return notes
+        return None
+
 class BluesToolkit:
     def __init__(self):        
         self.scale_metadata = {
@@ -229,7 +319,7 @@ class BluesToolkit:
     
     def _get_scale_details(self, root, scale_name, chord_offsets):
         """Enhanced version: Calculate the notes and label their relationship to the chord."""
-        converter = ChordConverter()
+        converter = EnhancedChordConverter()
         meta = self.scale_metadata.get(scale_name, {"intervals": []})
         root_idx = converter.note_to_idx[root]
         
@@ -249,7 +339,7 @@ class BluesToolkit:
 
     def _calculate_scale_notes(self, root, scale_name):
         """Calculate the specific notes based on the root and scale name"""
-        converter = ChordConverter()
+        converter = EnhancedChordConverter()
         if scale_name not in self.scale_metadata:
             return []
         
@@ -264,7 +354,7 @@ class BluesToolkit:
         Recommend a tonal scale, including the specific notes.
         Return format: [(scale name, reason, list of notes)]
         """
-        converter = ChordConverter()
+        converter = EnhancedChordConverter()
         notes = converter._ensure_notes_and_root(chord_input)
         if not notes: return []
             
@@ -308,7 +398,7 @@ class BluesToolkit:
         In addition to the basic recommendation, add an 'advanced alternative' pentatonic scale.
         For example, on Cmaj7, recommend G Major Pentatonic to obtain a #11 (Lydian) color.
         """
-        converter = ChordConverter()
+        converter = EnhancedChordConverter()
         notes = converter._ensure_notes_and_root(chord_input)
         root = notes[0]
         root_idx = converter.note_to_idx[root]
@@ -376,7 +466,7 @@ class BluesToolkit:
 
     def suggest_with_feel(self, chord_input):
         """Complete recommendation with perceptual analysis"""
-        converter = ChordConverter()
+        converter = EnhancedChordConverter()
         notes = converter._ensure_notes_and_root(chord_input) #
         root = notes[0]
         
@@ -684,9 +774,9 @@ class LCCAnalyzer:
         return results
     
 class JazzBrain:
-    """Main class to integrate ChordConverter, CSTAnalyzer, and LCCAnalyzer for providing improvisation advice based on a given chord"""
+    """Main class to integrate EnhancedChordConverter, BluesToolkit, CSTAnalyzer, and LCCAnalyzer for providing improvisation advice based on a given chord"""
     def __init__(self):
-        self.converter = ChordConverter()
+        self.converter = EnhancedChordConverter()
         self.cst = CSTAnalyzer()
         self.lcc = LCCAnalyzer()
         self.blues = BluesToolkit()
