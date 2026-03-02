@@ -247,7 +247,7 @@ class BluesToolkit:
     def _calculate_scale_notes(self, root, scale_name):
         """Calculate the specific notes based on the root and scale name"""
         converter = ChordConverter()
-        if scale_name not in self.scale_metadata['intervals']:
+        if scale_name not in self.scale_metadata[scale_name]['intervals']:
             return []
         
         root_idx = converter.note_to_idx[root]
