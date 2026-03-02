@@ -94,14 +94,6 @@ C   C#  D   D#  E   F   F#  G   G#  A   A#  B
 
 ---
 
-## Extension Ideas
-
-* **MIDI Export**: Connect these classes to a MIDI library to generate backing tracks.
-* **Guitar Fretboard**: Add a visualizer for 6-string fretboard positions.
-* **Real-time Modulation**: Detect when a song shifts from one key center to another.
-
----
-
 ## License
 
 Distributed under the **MIT License**. Feel free to use this in your DAWs, educational apps, or personal practice tools.
