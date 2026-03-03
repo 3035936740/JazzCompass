@@ -1340,45 +1340,45 @@ class JazzBrain:
         curr_notes_set = frozenset(curr_info["offsets"])
         
         raw_candidates = []
-        seen_structures = {curr_notes_set} # 用于物理音符去重
+        seen_structures = {curr_notes_set} # Used for deduplicating physical notes
 
-        # 1. 提取所有不重复的公式结构 (去重逻辑)
+        # 1. Extract all unique formula structures (deduplication logic)
         unique_formulas = {}
         for f_name, f_offsets in self.converter.chord_formulas.items():
             f_set = frozenset(f_offsets)
             if f_set not in unique_formulas:
                 unique_formulas[f_set] = f_name
 
-        # 2. 遍历 12 个根音，生成所有可能的公式和弦
+        # 2. Iterate through all 12 roots, generating all possible formula chords
         for r_offset in range(12):
             root_name = self.converter.idx_to_note[r_offset]
             for f_set, f_name in unique_formulas.items():
-                # 转换为绝对半音索引
+                # Convert to absolute semitone indices
                 abs_offsets = tuple(sorted([(x + r_offset) % 12 for x in f_set]))
                 abs_fset = frozenset(abs_offsets)
                 
                 if abs_fset not in seen_structures:
                     stability = self._calculate_stability(curr_notes_set, abs_fset)
-                    # 只保留有一定关联性的和弦，避免完全随机的噪音
+                    # Keep only chords with certain relevance to avoid completely random noise
                     if stability > 3.0:
                         raw_candidates.append({
                             "chord": f"{root_name}{f_name}",
                             "source": "Formula",
-                            "offsets": abs_offsets, # 这里存储排序后的 tuple，解决索引问题
-                            "root": r_offset,       # 明确存储根音
+                            "offsets": abs_offsets, # Store the sorted tuple here to resolve indexing issues
+                            "root": r_offset,       # Explicitly store the root note
                             "stability": stability
                         })
                         seen_structures.add(abs_fset)
 
-        # 3. 动态自创和弦 (Mutation: Add/Omit)
+        # 3. Dynamically created chords (Mutation: Add/Omit)
         mutations = []
-        # 对目前最稳定的前 15 个候选进行变异
+        # Mutate the top 15 most stable candidates
         for cand in sorted(raw_candidates, key=lambda x: x['stability'], reverse=True)[:15]:
             c_root = cand['root']
             c_offsets = list(cand['offsets'])
             
-            # --- 自创 A: Omit 5 (爵士乐的核心，去掉纯五度让声部更透明) ---
-            # 检查是否有纯五度音 (相对于根音偏移 7)
+            # --- Mutation A: Omit 5 (Core of jazz, removing the perfect fifth creates more transparent voicings) ---
+            # Check for the presence of a perfect fifth (offset 7 relative to the root)
             fifth_val = (c_root + 7) % 12
             if fifth_val in c_offsets:
                 no5_offsets = tuple(sorted([n for n in c_offsets if n != fifth_val]))
@@ -1392,7 +1392,7 @@ class JazzBrain:
                     })
                     seen_structures.add(frozenset(no5_offsets))
 
-            # --- 自创 B: Add 9 / Add 11 (增加色彩) ---
+            # --- Mutation B: Add 9 / Add 11 (Add color) ---
             for ext_interval in [2, 5]: # 9th, 11th
                 ext_val = (c_root + ext_interval) % 12
                 if ext_val not in c_offsets:
@@ -1412,19 +1412,19 @@ class JazzBrain:
 
         final_results = []
         for item in raw_candidates:
-            # 1. 基础物理指标
+            # 1. Basic physical indicators
             stability = self._calculate_stability(curr_notes_set, item['offsets'])
             brightness = self._calculate_brightness(curr_root, item['root'], item['offsets'])
             
-            # 2. 计算张力值 (Tension) [0-10]
+            # 2. Calculate tension value [0-10]
             tension = self._calculate_tension(item['root'], item['offsets'], item['source'])
             
-            # 3. 综合推荐分 (Score) 算法升级
-            # 推荐分 = 稳定性平衡 + 张力奖励(适度)
-            # 我们不希望分数只偏向稳定的和弦，有张力且能导进的才是有趣的和弦
+            # Comprehensive recommendation score (Score) algorithm upgrade
+            # Score = Stability balance + Tension reward (moderate)
+            # We don't want the score to only favor stable chords; chords with tension that also lead somewhere are the interesting ones
             rec_score = (stability * 0.6) + (tension * 0.4) 
             
-            # 共同音奖励
+            # Common tone reward
             common_count = len(curr_notes_set.intersection(item['offsets']))
             rec_score += (common_count * 0.2)
             
@@ -1438,43 +1438,43 @@ class JazzBrain:
                 "notes": [self.converter.idx_to_note[n] for n in item["offsets"]]
             })
 
-        # 排序：优先推荐总分，展示音乐性最好的衔接
+        # Sorting: Prioritize total score, showcasing the most musical connections
         final_results.sort(key=lambda x: x["score"], reverse=True)
         return final_results
 
     def _calculate_tension(self, root, offsets, source):
         """
-        计算张力值：
-        - 包含三全音 (Tritone): +3.0
-        - 包含小二度 (m2): +2.5 (极高张力)
-        - 包含大七度 (M7): +1.5
-        - 每一个扩展音 (9, 11, 13): +1.0
-        - 变异来源补偿: +1.0
+        Calculate tension value:
+        - Contains tritone: +3.0
+        - Contains minor second (m2): +2.5 (extremely high tension)
+        - Contains major seventh (M7): +1.5
+        - Each extension (9, 11, 13): +1.0
+        - Mutation source compensation: +1.0
         """
         tension = 0.0
-        # 转化为相对于根音的音程
+        # Convert to intervals relative to the root
         intervals = sorted([(n - root) % 12 for n in offsets])
         
-        # 1. 内部音程冲突检测
+        # 1. Internal interval conflict detection
         for i in range(len(intervals)):
             for j in range(i + 1, len(intervals)):
                 diff = abs(intervals[i] - intervals[j]) % 12
-                if diff == 6: tension += 3.0    # Tritone (属和弦张力来源)
-                if diff == 1: tension += 2.5    # Small Second (尖锐冲突)
-                if diff == 11: tension += 1.5   # Major Seventh (尖锐但悦耳)
+                if diff == 6: tension += 3.0    # Tritone
+                if diff == 1: tension += 2.5    # Small Second
+                if diff == 11: tension += 1.5   # Major Seventh
 
-        # 2. 扩展音丰富度
+        # 2. Extension note richness
         extensions = [n for n in intervals if n in [1, 2, 5, 6, 8, 10]] # b9, 9, 11, #11, b13, 13
         tension += len(extensions) * 0.8
 
-        # 3. 来源加成
+        # 3. Source bonus
         if source.startswith("Creative"): tension += 1.0
-        if source == "Negative": tension += 1.5 # 负和弦通常带有神秘张力
+        if source == "Negative": tension += 1.5 # Negative harmony typically carries a mysterious tension
 
         return round(max(0, min(10, tension)), 1)
 
     def _calculate_stability(self, set1, set2):
-        """计算声部导进稳定性"""
+        """Calculate voice-leading stability"""
         common = len(set1.intersection(set2))
         dist = 0
         for n1 in set1:
@@ -1482,20 +1482,19 @@ class JazzBrain:
         return round(10 - (dist * 0.8) + (common * 2.0), 1)
 
     def _calculate_brightness(self, curr_root, next_root, next_offsets):
-        """基于五度圈位移和音程性质计算明亮度"""
+        """Calculate brightness based on circle of fifths displacement and interval qualities"""
         def get_circle_pos(idx): return (idx * 7) % 12
         
-        # 基础位移 [-6, 6]
         shift = (get_circle_pos(next_root) - get_circle_pos(curr_root) + 6) % 12 - 6
         
-        # 性质加成：检查是否包含大三度、大七度等亮音程
+        # Quality bonus: Check for inclusion of bright intervals such as major thirds and major sevenths
         bias = 0
         rel_notes = [(n - next_root) % 12 for n in next_offsets]
-        if 4 in rel_notes: bias += 1  # 大三度亮
-        if 3 in rel_notes: bias -= 2  # 小三度暗
-        if 11 in rel_notes: bias += 1 # 大七度亮
-        if 6 in rel_notes: bias -= 1  # 三全音不稳定/暗
-        if 2 in rel_notes: bias += 1  # 九度亮
+        if 4 in rel_notes: bias += 1  # Major third bright
+        if 3 in rel_notes: bias -= 2  # Minor third dark
+        if 11 in rel_notes: bias += 1 # Major seventh bright
+        if 6 in rel_notes: bias -= 1  # Tritone unstable/dark
+        if 2 in rel_notes: bias += 1  # Ninth bright
         
         return int(max(-10, min(10, shift + bias)))
     
