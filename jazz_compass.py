@@ -1,4 +1,4 @@
-import re
+import re, random
 
 class ChordConverter:
     def __init__(self):
@@ -18,6 +18,7 @@ class ChordConverter:
             "major": [0, 4, 7],
             "maj": [0, 4, 7],
             "M": [0, 4, 7],
+            "": [0, 4, 7],
             "minor": [0, 3, 7],
             "min": [0, 3, 7],
             "m": [0, 3, 7],
@@ -25,8 +26,8 @@ class ChordConverter:
             "dim": [0, 3, 6],
             "sus2": [0, 2, 7],
             "sus4": [0, 5, 7],
-            "tri": [0, 4, 7], # Triad
-            "mb5": [0, 3, 6],
+            "p4": [0, 5, 10], # pure 4th
+            "t4": [0, 5, 11], # tritone
             "majB5": [0, 4, 6],
             "Mb5": [0, 4, 6],
 
@@ -40,8 +41,8 @@ class ChordConverter:
             # --- 7th Chords ---
             "7": [0, 4, 7, 10],
             "m7": [0, 3, 7, 10],
-            "maj7": [0, 4, 7, 11],
             "M7": [0, 4, 7, 11],
+            "maj7": [0, 4, 7, 11],
             "m-maj7": [0, 3, 7, 11],
             "m-M7": [0, 3, 7, 11],
             "7sus4": [0, 5, 7, 10],
@@ -113,9 +114,10 @@ class ChordConverter:
             "m-M7add11": [0, 3, 7, 11, 17],
             "m-M7add13": [0, 3, 7, 11, 21],
             "m-M11": [0, 3, 7, 11, 14, 17],
-            "m-M13": [0, 3, 7, 11, 14, 17, 21],
-            "augsus4": [0, 5, 8],
+            "m-M13": [0, 3, 7, 11, 14, 17, 21]
         }
+        
+        self.reverse_formulas = {tuple(sorted(v)): k for k, v in self.chord_formulas.items()}
 
     def parse(self, input_str: str) -> set:
         """Convenience method to directly get note names from input string"""
@@ -225,13 +227,15 @@ class EnhancedChordConverter(ChordConverter):
             '6': 9, 'bb7': 9, '7bb': 9, '#6': 10, '6#': 10, 'b7': 10, '7b': 10, '7': 11, 'maj7': 11, '7maj': 11,
             '9': 14, 'b9': 13, '9b': 13, '#9': 15, '9#': 15, '11': 17, '#11': 18, '11#': 18, '13': 21, 'b13': 20, '13b': 20
         }
+        
+        self.reverse_formulas = {tuple(sorted(v)): k for k, v in self.chord_formulas.items()}
 
     def parse_and_get_notes(self, input_str: str):
         if "/" in input_str:
             return self.parse_slash_chord(input_str)
 
         # 1. Extract the root note (A-G + #/b)
-        root_match = re.match(r"^([A-G][#b]?)", input_str)
+        root_match = re.match(r"^([A-G][#b]?)(.*)$", input_str)
         if not root_match:
             raise ValueError(f"Invalid root in: {input_str}")
         
@@ -293,18 +297,96 @@ class EnhancedChordConverter(ChordConverter):
             "chord": original_str,
             "notes": note_names,
             "offsets": final_abs_indices,
-            "is_slash": False
+            "is_slash": False,
+            "root": root,
+            "quality": chord_type
         }
 
-    def _ensure_notes_and_root(self, chord_input):
+    def _ensure_notes_and_root(self, chord_input, is_detailed = False):
         """Unify input processing: Return (list of notes, root note)"""
+        result = None
         if isinstance(chord_input, str):
             data = self.parse_and_get_notes(chord_input)
-            return data["notes"]
+            if is_detailed:
+                result = data
+            else:
+                result = data["notes"]
         elif isinstance(chord_input, (list, set, tuple)):
-            notes = list(chord_input)
-            return notes
-        return None
+            if is_detailed:
+                root_note = chord_input[0]
+                notes_index = [self.note_to_idx.get(n) for n in chord_input]
+                rt_index_v = notes_index[0]
+                
+                notes_index_new = []
+                
+                last_value = None
+                for idx in notes_index:
+                    if last_value is not None and idx < last_value:
+                        idx += 12  # Adjust for octave wraparound
+                    notes_index_new.append(idx - rt_index_v)
+                    
+                    last_value = idx
+                key = None
+                target_tuple = tuple(sorted(notes_index_new))
+                if target_tuple in self.reverse_formulas:
+                    key = self.reverse_formulas[target_tuple]
+                else:
+                    raise ValueError(f"Unable to identify chord for notes: {chord_input} with offsets: {notes_index_new}")
+                    
+                chord = f"{root_note}{key}"
+                result = {
+                    "chord": chord,
+                    "notes": list(chord_input),
+                    "offsets": notes_index_new,
+                    "is_slash": False,
+                    "root": root_note,
+                    "quality": key
+                }
+            else:
+                result = list(chord_input)
+            
+        return result
+
+    def identify_chord(self, indices : list | tuple | set):
+        """
+        Reverse engineer chord name by note index
+        """
+        root_name = self.idx_to_note[indices[0]]
+        indices = sorted([i % 12 for i in set(indices)])
+        n_notes = len(indices)
+        
+        result = {
+            "chord": None,
+            "root": root_name,
+            "quality": None
+        }
+        
+        # Try the possibility of each note as the root
+        for i in range(n_notes):
+            root = indices[i]
+            offsets = sorted([(idx - root) % 12 for idx in indices])
+            offsets_tuple = tuple(offsets)
+            
+            # Precise matching formula library
+            if offsets_tuple in self.reverse_formulas:
+                quality = self.reverse_formulas[offsets_tuple]
+                # Handle empty strings (major triads are usually an empty string or "maj")
+                quality_display = quality if quality else ""
+                
+                result["chord"] = f"{root_name}{quality_display}"
+                result["quality"] = quality_display
+                
+                return result
+
+        # If no match is found, use Add/Omit logic (based on the first note)
+        root = indices[0]
+        # Simplified approach here: List all interval names relative to the root note
+        intervals = [(idx - root) % 12 for idx in indices[1:]]
+        
+        result["chord"] = f"{root_name}(add {','.join(map(str, intervals))})"
+        result["quality"] = f"add {','.join(map(str, intervals))}"
+        
+        return result
 
 class BluesToolkit:
     def __init__(self):        
@@ -773,6 +855,213 @@ class LCCAnalyzer:
         results.sort(key=lambda x: x['gravity'])
         return results
     
+class NeoRiemannianToolkit:
+    def __init__(self):
+        self.converter = EnhancedChordConverter()
+        self.formulas = self.converter.chord_formulas
+
+    def get_Dn_transform(self, chord_input, chord_form : list | tuple | set = [0, 4, 7], n=1):
+        """
+        General Dn transformation algorithm
+        n=1: D (IV degree)
+        n=2: D2 (bVII degree/step from V to IV)
+        n=3: D3 (bIII degree)
+        """
+        info = self.converter._ensure_notes_and_root(chord_input, True)
+        root_offset = self.converter.note_to_idx[info["root"]]
+        
+        shift = (5 * n) % 12
+        
+        dn_indices = [(x + root_offset + shift) % 12 for x in chord_form]
+        
+        return {
+            f"D{n}": {
+                "chord": self.converter.identify_chord(dn_indices)['chord'],
+                "notes": [self.converter.idx_to_note[i] for i in dn_indices],
+                "offsets": dn_indices
+            }
+        }
+
+    def get_triad_transform(self, chord_input):
+        """
+        Tone Network Diagram core PLRSNDD2 transformation + Augmented hub logic
+        """
+        info = self.converter._ensure_notes_and_root(chord_input, True)
+        notes = info["notes"]
+        quality = info["quality"]
+        if len(notes) < 3: return None
+        
+        root_offset = info["offsets"][0]
+        r, t, f = [self.converter.note_to_idx[n] for n in notes[:3]]
+        
+        is_major = quality in ["", "maj", "major", "M"]
+        is_minor = quality in ["min", "m", "minor"]
+        is_aug = quality == "aug"
+        is_dim = quality == "dim"
+        is_sus4 = quality == "sus4"
+        is_sus2 = quality == "sus2"
+        
+        major_form = self.converter.chord_formulas["major"]
+        minor_form = self.converter.chord_formulas["minor"]
+        aug_form = self.converter.chord_formulas["aug"]
+        dim_form = self.converter.chord_formulas["dim"]
+        sus4_form = self.converter.chord_formulas["sus4"]
+        sus2_form = self.converter.chord_formulas["sus2"]
+        
+        raw_ops = {}
+        if is_dim:
+            raw_ops["s1_r"] = [(x + root_offset - 1) % 12 for x in major_form]
+            raw_ops["p1_t_p1_f"] = [(x + root_offset) % 12 for x in major_form]
+            raw_ops["p1_f"] = [(x + root_offset) % 12 for x in minor_form]
+            raw_ops["s2_r"] = [(x + root_offset + 3) % 12 for x in minor_form]
+            
+            raw_ops["dim"] = [(x + root_offset + 6) % 12 for x in dim_form]
+            
+        elif is_sus4:
+            raw_ops["Resolve_P_Maj"] = [(x + root_offset) % 12 for x in major_form]
+            raw_ops["Resolve_P_Min"] = [(x + root_offset) % 12 for x in minor_form]
+            raw_ops["To_sus2"] = [(x + root_offset) % 12 for x in sus2_form]
+            raw_ops["To_IV"] = [(x + root_offset + 5) % 12 for x in major_form]
+            
+        elif is_sus2:
+            raw_ops["Resolve_P_Maj"] = [(x + root_offset) % 12 for x in major_form]
+            raw_ops["Resolve_P_Min"] = [(x + root_offset) % 12 for x in minor_form]
+            raw_ops["To_sus4"] = [(x + root_offset) % 12 for x in sus4_form]
+            
+            raw_ops["To_V"] = [(x + root_offset + 7) % 12 for x in major_form]
+            
+        elif is_aug:
+            raw_ops["s1_f"] = [(x + root_offset) % 12 for x in major_form]
+            raw_ops["s1_t"] = [(x + root_offset + 4) % 12 for x in major_form]
+            raw_ops["s1_r"] = [(x + root_offset - 4) % 12 for x in major_form]
+            raw_ops["p1_f"] = [(x + root_offset + 1) % 12 for x in minor_form]
+            raw_ops["p1_t"] = [(x + root_offset + 1 + 4) % 12 for x in minor_form]
+            raw_ops["p1_r"] = [(x + root_offset + 1 - 4) % 12 for x in minor_form]
+
+        elif is_major:
+            raw_ops.update({
+                "P": [(x + root_offset) % 12 for x in minor_form], 
+                "L": [(x + root_offset + 4) % 12 for x in minor_form],
+                "R": [(x + root_offset - 3) % 12 for x in minor_form],
+                "S": [(x + root_offset + 1) % 12 for x in minor_form], 
+                "N": [(x + root_offset + 5) % 12 for x in minor_form],
+                "ToAug": [(x + root_offset) % 12 for x in aug_form],
+                "ToSus4": [(x + root_offset) % 12 for x in sus4_form],
+                "ToSus2": [(x + root_offset) % 12 for x in sus2_form],
+                "ToDim": [(x + root_offset + 1) % 12 for x in dim_form],
+            })
+            
+            for n in range(1,7):
+                raw_ops[f"D{n}"] = self.get_Dn_transform(chord_input, major_form, n)['D'+str(n)]['offsets']
+        elif is_minor:
+            raw_ops.update({
+                "P": [(x + root_offset) % 12 for x in major_form], 
+                "L": [(x + root_offset - 4) % 12 for x in major_form], 
+                "R": [(x + root_offset + 3) % 12 for x in major_form],
+                "S": [(x + root_offset - 1) % 12 for x in major_form], 
+                "N": [(x + root_offset + 7) % 12 for x in major_form],
+                "ToAug": [(x + root_offset - 1) % 12 for x in aug_form],
+                "ToSus4": [(x + root_offset) % 12 for x in sus4_form],
+                "ToSus2": [(x + root_offset) % 12 for x in sus2_form],
+                "ToDim": [(x + root_offset) % 12 for x in dim_form],
+            })
+            
+            for n in range(1,7):
+                raw_ops[f"D{n}"] = self.get_Dn_transform(chord_input, minor_form, n)['D'+str(n)]['offsets']
+
+        # Format the output
+        final_results = {}
+        for op, idxs in raw_ops.items():
+            chord_name = self.converter.identify_chord(idxs)['chord']
+            note_names = [self.converter.idx_to_note[i % 12] for i in idxs]
+            final_results[op] = {"chord": chord_name, "notes": note_names}
+            
+        return final_results
+    
+    def _build(self, root_idx, quality):
+        """Assist in constructing chord names"""
+        root_name = self.converter.idx_to_note[root_idx % 12]
+        q = quality if quality in self.formulas else ""
+        return f"{root_name}{q}"
+    
+    def get_octatonic_neighbors(self, chord_input):
+        """
+        Octave Tower Cycle
+        """
+        info = self.converter._ensure_notes_and_root(chord_input, True)
+        root = info["offsets"][0]
+        q = self.converter.identify_chord(info["offsets"])['quality']
+        
+        neighbors = []
+        
+        if q == "m7b5":
+            neighbors += [self._build(root, "m7"), self._build(root+3, "m7"), 
+                          self._build(root-1, "maj7"), self._build(root, "dim7")]
+
+        elif q == "dim7":
+            neighbors.append(self._build(root - 6, "m7b5"))
+            neighbors.append(self._build(root - 3, "m7b5"))
+            neighbors.append(self._build(root + 0, "m7b5"))
+            neighbors.append(self._build(root + 3, "m7b5"))
+            
+            neighbors.append(self._build(root - 1, "7"))
+            neighbors.append(self._build(root - 4, "7"))
+            neighbors.append(self._build(root + 2, "7"))
+            neighbors.append(self._build(root + 5, "7"))
+
+        elif q == "maj7":
+            neighbors += [self._build(root, "7"), self._build(root+1, "m7b5")]
+
+        elif q == "7":
+            neighbors += [self._build(root-5, "dim7"), self._build(root, "m7"), 
+                          self._build(root-3, "m7"), self._build(root, "maj7")]
+
+        elif q == "m7":
+            neighbors += [self._build(root, "7"), self._build(root - 3, "m7b5"), 
+                          self._build(root, "m7b5"), self._build(root + 3, "7")]
+
+        # Filter out itself and null values
+        unique_results = []
+        seen = set()
+        for n in neighbors:
+            if n != chord_input and n not in seen:
+                unique_results.append(n)
+                seen.add(n)
+        return unique_results
+    
+    def get_geometric_neighbors(self, chord_input):
+        """Complete query integrating Octave Tower and Tone Network Diagram"""
+        target_info = self.converter._ensure_notes_and_root(chord_input, True)
+        target_offsets = set(target_info["offsets"])
+        
+        results = {
+            "Tonnetz_PLRSND": {},
+            "Octatonic_Tower": [],
+        }
+
+        # Fill in Tonnetz transformations (if it's a triad)
+        if len(target_offsets) == 3:
+            results["Tonnetz_PLRSND"] = self.get_triad_transform(chord_input)
+
+        if len(target_offsets) >= 4:
+            octatonic = self.get_octatonic_neighbors(chord_input)
+            results["Octatonic_Tower"] = octatonic
+
+        candidates = []
+        
+        tonnetz = results["Tonnetz_PLRSND"]
+        for __, info in tonnetz.items():
+            candidates.append(info["chord"])
+            
+        # 遍历 Octatonic_Tower (列表结构)
+        oct_tower = results["Octatonic_Tower"]
+        for chord_name in oct_tower:
+            candidates.append(chord_name)
+
+        results["candidates"] = candidates
+
+        return results
+    
 class JazzBrain:
     """Main class to integrate EnhancedChordConverter, BluesToolkit, CSTAnalyzer, and LCCAnalyzer for providing improvisation advice based on a given chord"""
     def __init__(self):
@@ -780,6 +1069,7 @@ class JazzBrain:
         self.cst = CSTAnalyzer()
         self.lcc = LCCAnalyzer()
         self.blues = BluesToolkit()
+        self.nrt = NeoRiemannianToolkit()
 
     def get_advice(self, *args):
         """Given a chord string (e.g., 'G7', 'F#m7b5', 'Bbmaj9'), provide improvisation advice based on both CST and LCC analyses"""
@@ -1043,6 +1333,171 @@ class JazzBrain:
             neg_val = int((2 * axis_val - val) % 12)
             neg_notes.append(self.converter.idx_to_note[neg_val])
         return neg_notes
+    
+    def get_chord_recommendations(self, chord_input):
+        curr_info = self.converter._ensure_notes_and_root(chord_input, True)
+        curr_root = curr_info["offsets"][0]
+        curr_notes_set = frozenset(curr_info["offsets"])
+        
+        raw_candidates = []
+        seen_structures = {curr_notes_set} # 用于物理音符去重
+
+        # 1. 提取所有不重复的公式结构 (去重逻辑)
+        unique_formulas = {}
+        for f_name, f_offsets in self.converter.chord_formulas.items():
+            f_set = frozenset(f_offsets)
+            if f_set not in unique_formulas:
+                unique_formulas[f_set] = f_name
+
+        # 2. 遍历 12 个根音，生成所有可能的公式和弦
+        for r_offset in range(12):
+            root_name = self.converter.idx_to_note[r_offset]
+            for f_set, f_name in unique_formulas.items():
+                # 转换为绝对半音索引
+                abs_offsets = tuple(sorted([(x + r_offset) % 12 for x in f_set]))
+                abs_fset = frozenset(abs_offsets)
+                
+                if abs_fset not in seen_structures:
+                    stability = self._calculate_stability(curr_notes_set, abs_fset)
+                    # 只保留有一定关联性的和弦，避免完全随机的噪音
+                    if stability > 3.0:
+                        raw_candidates.append({
+                            "chord": f"{root_name}{f_name}",
+                            "source": "Formula",
+                            "offsets": abs_offsets, # 这里存储排序后的 tuple，解决索引问题
+                            "root": r_offset,       # 明确存储根音
+                            "stability": stability
+                        })
+                        seen_structures.add(abs_fset)
+
+        # 3. 动态自创和弦 (Mutation: Add/Omit)
+        mutations = []
+        # 对目前最稳定的前 15 个候选进行变异
+        for cand in sorted(raw_candidates, key=lambda x: x['stability'], reverse=True)[:15]:
+            c_root = cand['root']
+            c_offsets = list(cand['offsets'])
+            
+            # --- 自创 A: Omit 5 (爵士乐的核心，去掉纯五度让声部更透明) ---
+            # 检查是否有纯五度音 (相对于根音偏移 7)
+            fifth_val = (c_root + 7) % 12
+            if fifth_val in c_offsets:
+                no5_offsets = tuple(sorted([n for n in c_offsets if n != fifth_val]))
+                if frozenset(no5_offsets) not in seen_structures:
+                    mutations.append({
+                        "chord": f"{cand['chord']}(no5)",
+                        "source": "Creative(Omit)",
+                        "offsets": no5_offsets,
+                        "root": c_root,
+                        "stability": self._calculate_stability(curr_notes_set, frozenset(no5_offsets))
+                    })
+                    seen_structures.add(frozenset(no5_offsets))
+
+            # --- 自创 B: Add 9 / Add 11 (增加色彩) ---
+            for ext_interval in [2, 5]: # 9th, 11th
+                ext_val = (c_root + ext_interval) % 12
+                if ext_val not in c_offsets:
+                    ext_offsets = tuple(sorted(c_offsets + [ext_val]))
+                    if frozenset(ext_offsets) not in seen_structures:
+                        label = "add9" if ext_interval == 2 else "add11"
+                        mutations.append({
+                            "chord": f"{cand['chord']}{label}",
+                            "source": "Creative(Add)",
+                            "offsets": ext_offsets,
+                            "root": c_root,
+                            "stability": self._calculate_stability(curr_notes_set, frozenset(ext_offsets))
+                        })
+                        seen_structures.add(frozenset(ext_offsets))
+
+        raw_candidates.extend(mutations)
+
+        final_results = []
+        for item in raw_candidates:
+            # 1. 基础物理指标
+            stability = self._calculate_stability(curr_notes_set, item['offsets'])
+            brightness = self._calculate_brightness(curr_root, item['root'], item['offsets'])
+            
+            # 2. 计算张力值 (Tension) [0-10]
+            tension = self._calculate_tension(item['root'], item['offsets'], item['source'])
+            
+            # 3. 综合推荐分 (Score) 算法升级
+            # 推荐分 = 稳定性平衡 + 张力奖励(适度)
+            # 我们不希望分数只偏向稳定的和弦，有张力且能导进的才是有趣的和弦
+            rec_score = (stability * 0.6) + (tension * 0.4) 
+            
+            # 共同音奖励
+            common_count = len(curr_notes_set.intersection(item['offsets']))
+            rec_score += (common_count * 0.2)
+            
+            final_results.append({
+                "chord": item["chord"],
+                "source": item["source"],
+                "score": round(max(0, min(10, rec_score)), 1),
+                "stability": stability,
+                "tension": tension,
+                "brightness": brightness,
+                "notes": [self.converter.idx_to_note[n] for n in item["offsets"]]
+            })
+
+        # 排序：优先推荐总分，展示音乐性最好的衔接
+        final_results.sort(key=lambda x: x["score"], reverse=True)
+        return final_results
+
+    def _calculate_tension(self, root, offsets, source):
+        """
+        计算张力值：
+        - 包含三全音 (Tritone): +3.0
+        - 包含小二度 (m2): +2.5 (极高张力)
+        - 包含大七度 (M7): +1.5
+        - 每一个扩展音 (9, 11, 13): +1.0
+        - 变异来源补偿: +1.0
+        """
+        tension = 0.0
+        # 转化为相对于根音的音程
+        intervals = sorted([(n - root) % 12 for n in offsets])
+        
+        # 1. 内部音程冲突检测
+        for i in range(len(intervals)):
+            for j in range(i + 1, len(intervals)):
+                diff = abs(intervals[i] - intervals[j]) % 12
+                if diff == 6: tension += 3.0    # Tritone (属和弦张力来源)
+                if diff == 1: tension += 2.5    # Small Second (尖锐冲突)
+                if diff == 11: tension += 1.5   # Major Seventh (尖锐但悦耳)
+
+        # 2. 扩展音丰富度
+        extensions = [n for n in intervals if n in [1, 2, 5, 6, 8, 10]] # b9, 9, 11, #11, b13, 13
+        tension += len(extensions) * 0.8
+
+        # 3. 来源加成
+        if source.startswith("Creative"): tension += 1.0
+        if source == "Negative": tension += 1.5 # 负和弦通常带有神秘张力
+
+        return round(max(0, min(10, tension)), 1)
+
+    def _calculate_stability(self, set1, set2):
+        """计算声部导进稳定性"""
+        common = len(set1.intersection(set2))
+        dist = 0
+        for n1 in set1:
+            dist += min([abs(n1 - n2) % 12 for n2 in set2])
+        return round(10 - (dist * 0.8) + (common * 2.0), 1)
+
+    def _calculate_brightness(self, curr_root, next_root, next_offsets):
+        """基于五度圈位移和音程性质计算明亮度"""
+        def get_circle_pos(idx): return (idx * 7) % 12
+        
+        # 基础位移 [-6, 6]
+        shift = (get_circle_pos(next_root) - get_circle_pos(curr_root) + 6) % 12 - 6
+        
+        # 性质加成：检查是否包含大三度、大七度等亮音程
+        bias = 0
+        rel_notes = [(n - next_root) % 12 for n in next_offsets]
+        if 4 in rel_notes: bias += 1  # 大三度亮
+        if 3 in rel_notes: bias -= 2  # 小三度暗
+        if 11 in rel_notes: bias += 1 # 大七度亮
+        if 6 in rel_notes: bias -= 1  # 三全音不稳定/暗
+        if 2 in rel_notes: bias += 1  # 九度亮
+        
+        return int(max(-10, min(10, shift + bias)))
     
     # --- Rhythmic Comping ---
     def get_rhythmic_voicing(self, chord_input, style="Charleston"):

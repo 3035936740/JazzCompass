@@ -1,4 +1,4 @@
-from jazz_compass import ChordConverter, CSTAnalyzer, LCCAnalyzer, JazzBrain, BluesToolkit, EnhancedChordConverter
+from jazz_compass import ChordConverter, CSTAnalyzer, LCCAnalyzer, JazzBrain, BluesToolkit, EnhancedChordConverter, NeoRiemannianToolkit
 
 if __name__ == "__main__":
     # --- Test Run ---
@@ -97,17 +97,15 @@ if __name__ == "__main__":
         print(f"  Tension Source: {f['tension_notes']}")
         print("-" * 40)
         
-    # 实例化转换器
     converter = EnhancedChordConverter()
 
-    # 测试用例列表：展示各种组合语法
     test_cases = [
-        "Cmaj",                 # 标准大三和弦 (C-E-G)
-        "C add b7",             # 大三和弦外加小七度 (C-E-G-Bb)
-        "Cm add 9 omit 5",      # 小三和弦加九音，省略五音 (C-Eb-D)
-        "G7 add #11",           # 属七和弦加增十一音 (G-B-D-F-C#)
-        "A omit 3 add 4",       # 挂留四度和弦的一种写法 (A-D-E)
-        "Eb maj7 add 13 omit 5" # 大七和弦加十三音，省略五音 (Eb-G-D-C)
+        "Cmaj",             
+        "C add b7",       
+        "Cm add 9 omit 5",    
+        "G7 add #11",
+        "A omit 3 add 4", 
+        "Eb maj7 add 13 omit 5" 
     ]
 
     print(f"{'Input String':<25} | {'Notes Contained':<25} | {'Semitone Offsets'}")
@@ -121,3 +119,20 @@ if __name__ == "__main__":
             print(f"{chord_str:<25} | {notes_str:<25} | {offsets_str}")
         except Exception as e:
             print(f"{chord_str:<25} | Error: {e}")
+    
+    chord_str = "Cm" # ['F', 'Ab', 'B', 'Eb']  # Fm7b5
+    nrt = NeoRiemannianToolkit()
+    data = nrt.get_geometric_neighbors(chord_str)
+    print(f"\n=== Geometric Neighbors for {chord_str} ===")
+    print(data['candidates'])
+    if data["Tonnetz_PLRSND"]:
+        print(f"\n[Tonnetz PLRSND for {chord_str}]")
+        for op, notes in data["Tonnetz_PLRSND"].items():
+            print(f"  {op} Operation: {notes}")
+    
+    if data["Octatonic_Tower"]:
+        print(f"\n[Octatonic Tower Path]")
+        names = data["Octatonic_Tower"]
+        print(f"  Nearby: {', '.join(names)}")
+        
+    print(jazz_brain.get_chord_recommendations("Cmaj7")[:25])
