@@ -218,6 +218,393 @@ class ChordConverter:
             return notes
         return None
 
+class MusicScale():
+    def __init__(self):
+        self.scale_mode = [
+            {
+                "id": "lydian_sharp_5",
+                "scale_name": ["Lydian #5/Lydian Augmented", "Lydian #5", "Lydian Augmented", "利底亚升五音阶",  "利底亚升5音阶", "利底亚增音阶", "增利底亚音阶"],
+                "family": "Augment M7",
+                "intervals": [0, 2, 4, 6, 8, 9, 11],
+                "avoid_intervals_ids": [5],
+                "related_strong": ["ionian_sharp_5"],
+                "related_weak": ["lydian_sharp_2", "lydian"]
+            },
+            {
+                "id": "ionian_sharp_5",
+                "scale_name": ["Ionian #5/Ionian Augmented", "Ionian #5", "Ionian Augmented", "伊奥尼亚升五音阶", "伊奥尼亚升5音阶", "伊奥尼亚增音阶", "增伊奥尼亚音阶"],
+                "family": "Augment M7",
+                "intervals": [0, 2, 4, 5, 8, 9, 11],
+                "avoid_intervals_ids": [3, 5],
+                "related_strong": ["lydian_sharp_5"],
+                "related_weak": ["ionian"]
+            },
+            {
+                "id": "wholetone",
+                "scale_name": ["Wholetone", "全音音阶", "全音阶"],
+                "family": "Augment 7",
+                "intervals": [0, 2, 4, 6, 8, 10],
+                "avoid_intervals_ids": [],
+                "related_strong": [],
+                "related_weak": ["lydian_dominant"]
+            },
+            {
+                "id": "lydian",
+                "scale_name": ["Lydian", "利底亚音阶", "利底亚调式"],
+                "family": "Major Seventh",
+                "intervals": [0, 2, 4, 6, 7, 9, 11],
+                "avoid_intervals_ids": [],
+                "related_strong": ["lydian_sharp_2", "ionian"],
+                "related_weak": ["lydian_sharp_5"]
+            },
+            {
+                "id": "lydian_dominant",
+                "scale_name": ["Lydian Dominant/Lydian b7", "Lydian Dominant", "Lydian b7", "利底亚属音阶", "利底亚降七音阶", "利底亚降7音阶"],
+                "family": "Dominant Seventh",
+                "intervals": [0, 2, 4, 6, 7, 9, 10],
+                "avoid_intervals_ids": [],
+                "related_strong": ["mixlydian"],
+                "related_weak": ["wholetone", "dorian_sharp_4"]
+            },
+            {
+                "id": "lydian_sharp_2",
+                "scale_name": ["Lydian #2", "利底亚升二音阶", "利底亚增二音阶", "利底亚升2音阶", "利底亚增2音阶"],
+                "family": "Major Seventh",
+                "intervals": [0, 3, 4, 6, 7, 9, 11],
+                "avoid_intervals_ids": [],
+                "related_strong": ["lydian"],
+                "related_weak": ["lydian_sharp_5", "neapolitan_major"]
+            },
+            {
+                "id": "ionian",
+                "scale_name": ["Natural Major", "Major", "Ionian", "自然大调", "大调", "大调音阶", "伊奥尼亚调式"],
+                "family": "Major Seventh",
+                "intervals": [0, 2, 4, 5, 7, 9, 11],
+                "avoid_intervals_ids": [3],
+                "related_strong": ["lydian", "harmonic_major"],
+                "related_weak": ["ionian_sharp_5", "mixlydian", "melodic_minor", "blues_major"]
+            },
+            {
+                "id": "harmonic_major",
+                "scale_name": ["Harmonic Major", "Ionian b6", "和声大调", "伊奥尼亚降六音阶", "伊奥尼亚降6音阶"],
+                "family": "Major Seventh",
+                "intervals": [0, 2, 4, 5, 7, 8, 11],
+                "avoid_intervals_ids": [3, 5],
+                "related_strong": ["ionian", "arabic"],
+                "related_weak": ["harmonic_minor"]
+            },
+            {
+                "id": "arabic",
+                "scale_name": ["Arabic", "阿拉伯音阶"],
+                "family": "Major Seventh",
+                "intervals": [0, 1, 4, 5, 7, 8, 11],
+                "avoid_intervals_ids": [1, 3, 5],
+                "related_strong": ["harmonic_major", "neapolitan_major"],
+                "related_weak": []
+            },
+            {
+                "id": "mixlydian",
+                "scale_name": ["Mixlydian", "混合利底亚音阶", "混合利底亚调式", "米克索利底亚音阶"],
+                "family": "Dominant Seventh",
+                "intervals": [0, 2, 4, 5, 7, 9, 10],
+                "avoid_intervals_ids": [3],
+                "related_strong": ["lydian_dominant", "aeolian_dominant", "blues_major"],
+                "related_weak": ["ionian", "blues_minor"]
+            },
+            {
+                "id": "phrygian_dominant",
+                "scale_name": ["Phrygian Dominant(HmP5b)", "Phrygian Dominant", "HmP5b", "Phrygian #3", "弗里几亚属音阶", "弗里几亚升三音阶", "弗里几亚升3音阶", "西班牙音阶"],
+                "family": "Dominant Seventh",
+                "intervals": [0, 1, 4, 5, 7, 8, 10],
+                "avoid_intervals_ids": [3],
+                "related_strong": ["altered_dominant", "aeolian_dominant"],
+                "related_weak": ["dominant_diminished", "phrygian"]
+            },
+            {
+                "id": "aeolian_dominant",
+                "scale_name": ["Mixlydian b6/Aeolian Dominant", "Mixlydian b6", "Aeolian Dominant", "Aeolian b3", "Melodic Major", "混合利底亚降六音阶", "混合利底亚降6音阶", "爱奥利亚属音阶", "旋律大调音阶"],
+                "family": "Dominant Seventh",
+                "intervals": [0, 2, 4, 5, 7, 8, 10],
+                "avoid_intervals_ids": [3],
+                "related_strong": ["mixlydian", "phrygian_dominant"],
+                "related_weak": []
+            },
+            {
+                "id": "melodic_minor",
+                "scale_name": ["Melodic Minor", "Jazz Minor", "旋律小调", "爵士小调"],
+                "family": "Minor Major Seventh",
+                "intervals": [0, 2, 3, 5, 7, 9, 11],
+                "avoid_intervals_ids": [],
+                "related_strong": ["harmonic_minor", "neapolitan_major"],
+                "related_weak": ["ionian"]
+            },
+            {
+                "id": "harmonic_minor",
+                "scale_name": ["Harmonic Minor", "和声小调"],
+                "family": "Minor Major Seventh",
+                "intervals": [0, 2, 3, 5, 7, 8, 11],
+                "avoid_intervals_ids": [5],
+                "related_strong": ["melodic_minor", "neapolitan_minor"],
+                "related_weak": ["harmonic_major", "aeolian"]
+            },
+            {
+                "id": "dorian",
+                "scale_name": ["Dorian", "多利亚音阶", "多利亚调式"],
+                "family": "Minor Seventh",
+                "intervals": [0, 2, 3, 5, 7, 9, 10],
+                "avoid_intervals_ids": [5],
+                "related_strong": ["dorian_sharp_4", "aeolian", "dorian_flat_2"],
+                "related_weak": ["blues_minor"]
+            },
+            {
+                "id": "dorian_sharp_4",
+                "scale_name": ["Dorian #4", "多利亚升四音阶", "多利亚增四音阶", "多利亚升4音阶", "多利亚增4音阶"],
+                "family": "Minor Seventh",
+                "intervals": [0, 2, 3, 6, 7, 9, 10],
+                "avoid_intervals_ids": [],
+                "related_strong": ["dorian"],
+                "related_weak": ["lydian_dominant", "dorian_flat_2"]
+            },
+            {
+                "id": "aeolian",
+                "scale_name": ["Natural Minor", "Minor", "Aeolian", "自然小调", "小调音阶", "小调", "爱奥利亚调式"],
+                "family": "Minor Seventh",
+                "intervals": [0, 2, 3, 5, 7, 8, 10],
+                "avoid_intervals_ids": [5],
+                "related_strong": ["dorian", "phrygian"],
+                "related_weak": ["harmonic_minor", "aeolian_flat_5", "neapolitan_minor"]
+            },
+            {
+                "id": "dorian_flat_2",
+                "scale_name": ["Dorian b2/Phrygian ♮6", "Dorian b2", "Phrygian ♮6", "Phrygian #6", "多利亚降二音阶", "弗里几亚还原六音阶", "多利亚降2音阶", "弗里几亚还原6音阶"],
+                "family": "Minor Seventh",
+                "intervals": [0, 1, 3, 5, 7, 9, 10],
+                "avoid_intervals_ids": [1, 5],
+                "related_strong": ["dorian", "phrygian", "neapolitan_major"],
+                "related_weak": ["dorian_sharp_4", "neapolitan_minor"]
+            },
+            {
+                "id": "phrygian",
+                "scale_name": ["Phrygian", "弗里几亚音阶", "弗里几亚调式"],
+                "family": "Minor Seventh",
+                "intervals": [0, 1, 3, 5, 7, 8, 10],
+                "avoid_intervals_ids": [1, 5],
+                "related_strong": ["dorian_flat_2", "aeolian", "neapolitan_minor"],
+                "related_weak": ["phrygian_dominant"]
+            },
+            {
+                "id": "aeolian_flat_5",
+                "scale_name": ["Aeolian b5/Locrian ♮2","Aeolian b5", "Locrian ♮2", "Locrian #2", "爱奥利亚降五音阶", "洛克里亚还原二音阶", "爱奥利亚降5音阶", "洛克里亚还原2音阶"],
+                "family": "Half Diminished Seventh",
+                "intervals": [0, 2, 3, 5, 6, 8, 10],
+                "avoid_intervals_ids": [],
+                "related_strong": ["locrian"],
+                "related_weak": ["aeolian"]
+            },
+            {
+                "id": "locrian",
+                "scale_name": ["Locrian", "洛克里亚音阶", "洛克里亚调式"],
+                "family": "Half Diminished Seventh",
+                "intervals": [0, 1, 3, 5, 6, 8, 10],
+                "avoid_intervals_ids": [1],
+                "related_strong": ["aeolian_flat_5", "super_locrian"],
+                "related_weak": ["phrygian"]
+            },
+            {
+                "id": "super_locrian",
+                "scale_name": ["Super Locrian", "Locrian b4", "超级洛克里亚音阶", "洛克里亚降四音阶", "洛克里亚降4音阶"],
+                "family": "Half Diminished Seventh",
+                "intervals": [0, 1, 3, 4, 6, 8, 10],
+                "avoid_intervals_ids": [1,3],
+                "related_strong": ["locrian", "locrian_natural_6"],
+                "related_weak": []
+            },
+            {
+                "id": "locrian_natural_6",
+                "scale_name": ["Locrian ♮6", "Locrian #6", "洛克里亚还原六音阶"],
+                "family": "Half Diminished Seventh",
+                "intervals": [0, 1, 3, 5, 6, 9, 10],
+                "avoid_intervals_ids": [1],
+                "related_strong": ["super_locrian"],
+                "related_weak": []
+            },
+            {
+                "id": "altered_dominant",
+                "scale_name": ["Altered Dominant", "变化属音阶", "变更属音阶"],
+                "family": "Dominant Seventh",
+                "intervals": [0, 1, 3, 4, 6, 8, 10],
+                "avoid_intervals_ids": [],
+                "related_strong": ["phrygian_dominant"],
+                "related_weak": ["dominant_diminished"]
+            },
+            {
+                "id": "dominant_diminished",
+                "scale_name": ["Dominant Diminished(H-W)", "属减音阶", "属减缩音阶(半全)"],
+                "family": "Dominant Seventh",
+                "intervals": [0, 1, 3, 4, 6, 7, 9, 10],
+                "avoid_intervals_ids": [], 
+                "related_strong": ["dominant_diminished_as_dim"],
+                "related_weak": ["altered_dominant", "phrygian_dominant"]
+            },
+            {
+                "id": "dominant_diminished_as_dim",
+                "scale_name": ["Dominant Diminished(H-W)(as dim)", "属减缩音阶(减和弦视角)"],
+                "family": "Diminished Seventh",
+                "intervals": [0, 1, 3, 4, 6, 7, 9, 10],
+                "avoid_intervals_ids": [1,3,5,7], 
+                "related_strong": ["dominant_diminished", "diminished"],
+                "related_weak": []
+            },
+            {
+                "id": "diminished",
+                "scale_name": ["Diminished(W-H)", "减音阶", "减缩音阶(全半)"],
+                "family": "Diminished Seventh",
+                "intervals": [0, 2, 3, 5, 6, 8, 9, 11],
+                "avoid_intervals_ids": [1,3,5,7], 
+                "related_strong": ["dominant_diminished", "dominant_diminished_as_dim", "altered_super_locrian"],
+                "related_weak": []
+            },
+            {
+                "id": "altered_super_locrian",
+                "scale_name": ["Altered Super Locrian", "Super Locrian b7", "Locrian b4 b7", "变化超级洛克里亚音阶", "超级洛克里亚降七音阶", "洛克里亚降四降七音阶", "超级洛克里亚降7音阶", "洛克里亚降4降7音阶"],
+                "family": "Diminished Seventh",
+                "intervals": [0, 1, 3, 4, 6, 8, 9],
+                "avoid_intervals_ids": [1,3], 
+                "related_strong": ["diminished"],
+                "related_weak": []
+            },
+            {
+                "id": "neapolitan_major",
+                "scale_name": ["Neapolitan Major", "Melodic Minor b2", "那不勒斯大调", "拿坡里大调", "旋律小调降二音阶", "旋律小调降2音阶"],
+                "family": "Minor Major Seventh",
+                "intervals": [0, 1, 3, 5, 7, 9, 11],
+                "avoid_intervals_ids": [1],
+                "related_strong": ["melodic_minor", "lydian_sharp_2"],
+                "related_weak": ["dorian_flat_2"]
+            },
+            {
+                "id": "neapolitan_minor",
+                "scale_name": ["Neapolitan Minor", "Harmonic Minor b2", "那不勒斯小调", "拿坡里小调", "和声小调降二音阶", "和声小调降2音阶"],
+                "family": "Minor Major Seventh",
+                "intervals": [0, 1, 3, 5, 7, 8, 11],
+                "avoid_intervals_ids": [1, 5],
+                "related_strong": ["harmonic_minor", "phrygian"],
+                "related_weak": ["aeolian", "dorian_flat_2"]
+            },
+            {
+                "id": "blues_major",
+                "scale_name": ["Blues Major", "Major Blues", "大调布鲁斯音阶", "大布鲁斯音阶"],
+                "family": "Major Sixth",
+                "intervals": [0, 2, 3, 4, 7, 9],
+                "avoid_intervals_ids": [2],
+                "related_strong": ["mixlydian"],
+                "related_weak": ["ionian", "blues_minor"]
+            },
+            {
+                "id": "blues_minor",
+                "scale_name": ["Blues Minor", "Minor Blues", "小调布鲁斯音阶", "小布鲁斯音阶", "布鲁斯音阶"],
+                "family": "Minor Seventh",
+                "intervals": [0, 3, 5, 6, 7, 10],
+                "avoid_intervals_ids": [3],
+                "related_strong": ["aeolian"],
+                "related_weak": ["dorian", "mixlydian"]
+            }
+        ]
+        
+        self.chord_family = {
+            "Augment M7": [0, 4, 8, 11],
+            "Augment 7": [0, 4, 8, 10],
+            "Major Seventh": [0, 4, 7, 11],
+            "Dominant Seventh": [0, 4, 7, 10],
+            "Minor Major Seventh": [0, 3, 7, 11],
+            "Minor Seventh": [0, 3, 7, 10],
+            "Half Diminished Seventh": [0, 3, 6, 10],
+            "Diminished Seventh": [0, 3, 6, 9],
+            "Major Sixth": [0, 4, 7, 9],
+        }
+        
+        # ===================== 实用工具函数 =====================
+
+    def get_scales_by_chord_family(self, family_name: str):
+        """
+        根据和弦家族名称，查询所有匹配的音阶
+        :param family_name: 和弦家族名(如 "Major Seventh")
+        :return: 音阶列表
+        """
+        return [scale for scale in self.scale_mode if scale["family"] == family_name]
+
+    def get_scale_by_id(self, scale_id: str):
+        """根据ID精确查询音阶"""
+        for scale in self.scale_mode:
+            if scale["id"] == scale_id:
+                return scale
+        return None
+    
+    def get_chord_by_family(self, family_name: str):
+        """查询和弦家族对应的音程"""
+        return self.chord_family.get(family_name)
+        
+    def generate_scale_notes(self, root_note: int, scale_intervals: list):
+        """
+        生成具体音符（MIDI数字）
+        :param root_note: 根音MIDI（如C4=60）
+        :param scale_intervals: 音阶音程列表
+        :return: 实际音符列表
+        """
+        return [root_note + interval for interval in scale_intervals]
+    
+    def list_all_families(self):
+        """列出所有和弦家族"""
+        return list(self.chord_family.keys())
+    
+    def list_all_scales(self):
+        """列出所有音阶"""
+        return list(self.chord_family.keys())
+    
+    # 音阶匹配
+    def match_scale(self, query: str, is_nocase : bool = True, is_fuzzy : bool = True) -> list[str]:
+        # 转换查询为小写，方便匹配
+        if is_nocase:
+            query = query.lower()
+            
+        # 存储匹配的结果
+        matches = []
+        # 遍历字典，进行模糊匹配
+        for scale in self.scale_mode:
+            compelete_match = False
+            found_match = False
+            info = {"id": scale["id"], "scale_names": []}
+            
+            for scale_name in scale["scale_name"]:
+                if is_nocase:
+                    scale_name = scale_name.lower()
+                
+                if query == scale_name:
+                    found_match = True
+                    info["scale_names"].append(scale_name)
+                    compelete_match = True
+                    break  # 精确匹配到一个名称就可以了
+                
+                if is_fuzzy:
+                    if query in scale_name:
+                        found_match = True
+                        info["scale_names"].append(scale_name)
+                else:
+                    if query == scale_name:
+                        found_match = True
+                        info["scale_names"].append(scale_name)
+            
+            if found_match:
+                matches.append(info)
+            
+            if compelete_match:
+                matches.clear()  # 如果有完全匹配的结果，清除之前的模糊匹配结果
+                matches.append(info)
+                break  # 如果已经有完全匹配的结果，优先返回，不继续模糊匹配其他音阶
+            
+            found_match = False
+        return matches
+    
 class EnhancedChordConverter(ChordConverter):
     def __init__(self):
         super().__init__()
@@ -393,7 +780,7 @@ class BluesToolkit:
         self.scale_metadata = {
             "Minor Blues": {"intervals": [0, 3, 5, 6, 7, 10], "blue_notes": [3, 6, 10]},
             "Major Blues": {"intervals": [0, 2, 3, 4, 7, 9], "blue_notes": [3]},
-            "Mixolydian Blues": {"intervals": [0, 2, 3, 4, 5, 7, 9, 10], "blue_notes": [3, 10]},
+            "Mixlydian Blues": {"intervals": [0, 2, 3, 4, 5, 7, 9, 10], "blue_notes": [3, 10]},
             "Lydian Dominant": {"intervals": [0, 2, 4, 6, 7, 9, 10], "blue_notes": [6]},
             "Major Pentatonic": {"intervals": [0, 2, 4, 7, 9], "blue_notes": []},
             "Minor Pentatonic": {"intervals": [0, 3, 5, 7, 10], "blue_notes": []},
@@ -455,7 +842,7 @@ class BluesToolkit:
         has_minor_3rd = 3 in chord_offsets
 
         if has_major_3rd and has_b7:
-            raw_suggestions.append((root, "Mixolydian Blues", "Parallel: Classic jazz-blues sound"))
+            raw_suggestions.append((root, "Mixlydian Blues", "Parallel: Classic jazz-blues sound"))
             raw_suggestions.append((root, "Minor Blues", "Parallel: 'Blue' tension over major chord"))
             raw_suggestions.append((rel_minor_root, "Minor Pentatonic", "Relative: Sweet country-blues color"))
         elif has_minor_3rd:
@@ -571,54 +958,93 @@ class BluesToolkit:
                 })
         return report
 
-class CSTAnalyzer:
+class CSTAnalyzer(MusicScale):
     def __init__(self):
+        super().__init__()
+        self.is_flat: bool = True  # Default to flat notation
         self.handle_notes = {
             "Cb": "B",
+            "bC": "B",
             "C#": "Db",
+            "#C": "Db",
+            "Db": "Db",
+            "bD": "Db",
             "D#": "Eb",
+            "#D": "Eb",
+            "Eb": "Eb",
+            "bE": "Eb",
             "E#": "F",
+            "#E": "F",
             "Fb": "E",
+            "bF": "E",
             "F#": "Gb",
+            "#F": "Gb",
+            "Gb": "Gb",
+            "bG": "Gb",
             "G#": "Ab",
+            "#G": "Ab",
+            "Ab": "Ab",
+            "bA": "Ab",
             "A#": "Bb",
+            "#A": "Bb",
+            "Bb": "Bb",
+            "bB": "Bb",
+            "A": "A",
+            "B": "B",
+            "C": "C",
+            "D": "D",
+            "E": "E",
+            "F": "F",
+            "G": "G",
             "B#": "C",
+            "#B": "C",
+        }
+        self.handle_notes_sharp = {
+            "Cb": "B",
+            "bC": "B",
+            "Db": "C#",
+            "bD": "C#",
+            "C#": "C#",
+            "#C": "C#",
+            "Eb": "D#",
+            "bE": "D#",
+            "D#": "D#",
+            "#D": "D#",
+            "E#": "F",
+            "#E": "F",
+            "Fb": "E",
+            "bF": "E",
+            "Gb": "F#",
+            "bG": "F#",
+            "F#": "F#",
+            "#F": "F#",
+            "Ab": "G#",
+            "bA": "G#",
+            "G#": "G#",
+            "#G": "G#",
+            "Bb": "A#",
+            "bB": "A#",
+            "A#": "A#",
+            "#A": "A#",
+            "B#": "C",
+            "#B": "C",
+            "A": "A",
+            "B": "B",
+            "C": "C",
+            "D": "D",
+            "E": "E",
+            "F": "F",
+            "G": "G",
         }
         self.notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
+        self.notes_sharp = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
         self.note_to_val = {n: i for i, n in enumerate(self.notes)}
-        
+        self.note_to_val_sharp = {n: i for i, n in enumerate(self.notes_sharp)}
         self.circle_of_fifths = ['Gb', 'Db', 'Ab', 'Eb', 'Bb', 'F', 'C', 'G', 'D', 'A', 'E', 'B']
         
         # Define the semitone structure of the scale (0 represents the root)
         self.scale_definitions = {
         # --- Modes of Major ---
-            "Ionian (Major)": [0, 2, 4, 5, 7, 9, 11],
-            "Dorian": [0, 2, 3, 5, 7, 9, 10],
-            "Phrygian": [0, 1, 3, 5, 7, 8, 10],
-            "Lydian": [0, 2, 4, 6, 7, 9, 11],
-            "Mixolydian": [0, 2, 4, 5, 7, 9, 10],
-            "Aeolian (Minor)": [0, 2, 3, 5, 7, 8, 10],
-            "Locrian": [0, 1, 3, 5, 6, 8, 10],
-
-            # --- Variations ---
-            "Neapolitan Major": [0, 1, 3, 5, 7, 9, 11],
-            "Harmonic Major": [0, 2, 4, 5, 7, 8, 11],
-            "Melodic Major (Asc)": [0, 2, 4, 5, 7, 9, 11], # Same as Ionian
-            "Melodic Major (Desc)": [0, 2, 4, 5, 7, 8, 10], # Common in jazz IVm
-            "Neapolitan Minor": [0, 1, 3, 5, 7, 8, 11],
-            "Harmonic Minor": [0, 2, 3, 5, 7, 8, 11],
-            "Melodic Minor": [0, 2, 3, 5, 7, 9, 11],
-            "Phrygian Dominant": [0, 1, 4, 5, 7, 8, 10], # Flamenco / Phrygian Dominant
-            "Altered (Super Locrian)": [0, 1, 3, 4, 6, 8, 10],
-            "Lydian Dominant": [0, 2, 4, 6, 7, 9, 10],
-            "Lydian Augmented": [0, 2, 4, 6, 8, 9, 11],
-            
-            # --- Other ---
-            "Diminished (H-W)": [0, 1, 3, 4, 6, 7, 9, 10],
-            "Dominant Diminished (W-H)": [0, 2, 3, 5, 6, 8, 9, 11],
-            "Whole Tone": [0, 2, 4, 6, 8, 10],
-            "Blues Major": [0, 3, 5, 6, 7, 10],
-            "Blues Minor": [0, 2, 3, 4, 7, 9],
             "Bebop Dominant": [0, 2, 4, 5, 7, 9, 10, 11],
             "Bebop Major": [0, 2, 4, 5, 7, 8, 9, 11],
 
@@ -634,7 +1060,30 @@ class CSTAnalyzer:
             "Hungarian Minor": [0, 2, 3, 6, 7, 8, 11],
             "Egypt Scale": [0, 1, 3, 4, 7, 8, 10]
         }
+        
+        for scale_info in self.scale_mode:
+            scale_name = scale_info["scale_name"][0]
+            intervals = scale_info["intervals"]
+            self.scale_definitions[scale_name] = intervals
+                        
+    def note_standardize(self):
+        """Return a mapping of enharmonic equivalents based on the preferred accidental style."""
+        return self.handle_notes if self.is_flat else self.handle_notes_sharp
 
+    def ns_standardize(self):
+        """Return a mapping of enharmonic equivalents based on the preferred accidental style."""
+        return self.notes if self.is_flat else self.notes_sharp
+    
+    def note_to_val_standardize(self):
+        """Return a mapping of note names to semitone values based on the preferred accidental style."""
+        return self.note_to_val if self.is_flat else self.note_to_val_sharp
+
+
+    
+    def set_flat(self, is_flat: bool):
+        """Set the accidental style for note standardization."""
+        self.is_flat = is_flat
+    
     def scale_notes(self, *args):
         """
         Two calling methods are supported:
@@ -657,8 +1106,8 @@ class CSTAnalyzer:
         
     def _get_relative_fifths_pos(self, root, note):
         """Calculate the number of steps note is displaced from root on the circle of fifths"""
-        r = self.handle_notes.get(root, root)
-        n = self.handle_notes.get(note, note)
+        r = self.note_standardize().get(root, root)
+        n = self.note_standardize().get(note, note)
         r_idx = self.circle_of_fifths.index(r)
         n_idx = self.circle_of_fifths.index(n)
         
@@ -668,8 +1117,8 @@ class CSTAnalyzer:
 
     def get_scale_notes(self, root, intervals):
         """Calculate the notes in the scale based on the root and intervals"""
-        root_idx = self.notes.index(root)
-        return set(self.notes[(root_idx + i) % 12] for i in intervals)
+        root_idx = self.ns_standardize().index(root)
+        return tuple(self.ns_standardize()[(root_idx + i) % 12] for i in intervals)
 
     def analyze_tensions(self, chord_notes : list, scale_full_name: str):
         """
@@ -679,7 +1128,7 @@ class CSTAnalyzer:
         scale_notes = self.scale_notes(scale_full_name)
         
         # Convert notes to semitone indices for distance calculation
-        chord_vals = [self.note_to_val[self.handle_notes.get(n, n)] for n in chord_notes]
+        chord_vals = [self.note_to_val_standardize()[self.note_standardize().get(n, n)] for n in chord_notes]
         
         results = {"tensions": [], "avoid": []}
         
@@ -687,7 +1136,7 @@ class CSTAnalyzer:
             if s_note in chord_notes:
                 continue  # Skip chord tones
                 
-            s_val = self.note_to_val[self.handle_notes.get(s_note, s_note)]
+            s_val = self.note_to_val_standardize()[self.note_standardize().get(s_note, s_note)]
             is_avoid = False
             
             for c_val in chord_vals:
@@ -711,14 +1160,14 @@ class CSTAnalyzer:
         total_rel_pos = 0
         has_major_3rd = False
         
-        root_val = self.note_to_val[self.handle_notes.get(root, root)]
+        root_val = self.note_to_val_standardize()[self.note_standardize().get(root, root)]
         
         for n in scale_notes:
             # 1. Calculate relative displacement on the circle of fifths
             total_rel_pos += self._get_relative_fifths_pos(root, n)
             
             # 2. Check if major third (4 semitones) is present
-            n_val = self.note_to_val[self.handle_notes.get(n, n)]
+            n_val = self.note_to_val_standardize()[self.note_standardize().get(n, n)]
             if (n_val - root_val) % 12 == 4:
                 has_major_3rd = True
 
@@ -735,14 +1184,16 @@ class CSTAnalyzer:
         """Find which scales in which keys contain these chord tones"""
         
         for note in chord_notes:
-            if note in self.handle_notes:
-                chord_notes[chord_notes.index(note)] = self.handle_notes[note]
+            if note in self.note_standardize():
+                chord_notes[chord_notes.index(note)] = self.note_standardize()[note]
             
         
         chord_set = set(chord_notes)
         results = []
+        
+        
 
-        for root in self.notes:
+        for root in self.ns_standardize():
             for scale_name, intervals in self.scale_definitions.items():
                 scale_notes = self.get_scale_notes(root, intervals)
                 # If the chord tones are a subset of the scale notes
@@ -753,16 +1204,80 @@ class CSTAnalyzer:
 
 class LCCAnalyzer:
     def __init__(self):
+        
         self.handle_notes = {
             "Cb": "B",
+            "bC": "B",
             "C#": "Db",
+            "#C": "Db",
+            "Db": "Db",
+            "bD": "Db",
             "D#": "Eb",
+            "#D": "Eb",
+            "Eb": "Eb",
+            "bE": "Eb",
             "E#": "F",
+            "#E": "F",
             "Fb": "E",
+            "bF": "E",
             "F#": "Gb",
+            "#F": "Gb",
+            "Gb": "Gb",
+            "bG": "Gb",
             "G#": "Ab",
+            "#G": "Ab",
+            "Ab": "Ab",
+            "bA": "Ab",
             "A#": "Bb",
+            "#A": "Bb",
+            "Bb": "Bb",
+            "bB": "Bb",
+            "A": "A",
+            "B": "B",
+            "C": "C",
+            "D": "D",
+            "E": "E",
+            "F": "F",
+            "G": "G",
             "B#": "C",
+            "#B": "C",
+        }
+        self.handle_notes_sharp = {
+            "Cb": "B",
+            "bC": "B",
+            "Db": "C#",
+            "bD": "C#",
+            "C#": "C#",
+            "#C": "C#",
+            "Eb": "D#",
+            "bE": "D#",
+            "D#": "D#",
+            "#D": "D#",
+            "E#": "F",
+            "#E": "F",
+            "Fb": "E",
+            "bF": "E",
+            "Gb": "F#",
+            "bG": "F#",
+            "F#": "F#",
+            "#F": "F#",
+            "Ab": "G#",
+            "bA": "G#",
+            "G#": "G#",
+            "#G": "G#",
+            "Bb": "A#",
+            "bB": "A#",
+            "A#": "A#",
+            "#A": "A#",
+            "B#": "C",
+            "#B": "C",
+            "A": "A",
+            "B": "B",
+            "C": "C",
+            "D": "D",
+            "E": "E",
+            "F": "F",
+            "G": "G",
         }
         self.notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
         self.note_to_val = {n: i for i, n in enumerate(self.notes)}
@@ -782,10 +1297,18 @@ class LCCAnalyzer:
             "Aux. Dim. Blues": [0, 1, 3, 4, 6, 7, 9, 10]
         }
 
+    def set_flat(self, is_flat: bool):
+        """Set the accidental style for note standardization."""
+        self.is_flat = is_flat
+        
+    def note_standardize(self):
+        """Return a mapping of enharmonic equivalents based on the preferred accidental style."""
+        return self.handle_notes if self.is_flat else self.handle_notes_sharp
+
     def _get_fifths_distance(self, note1, note2):
         """Calculate the step distance between two notes on the circle of fifths (0-6)"""
-        n1 = self.handle_notes.get(note1, note1)
-        n2 = self.handle_notes.get(note2, note2)
+        n1 = self.note_standardize().get(note1, note1)
+        n2 = self.note_standardize().get(note2, note2)
         idx1 = self.fifths_order.index(n1)
         idx2 = self.fifths_order.index(n2)
         dist = abs(idx1 - idx2)
@@ -826,7 +1349,7 @@ class LCCAnalyzer:
         """Find potential parent Lydian scales for the given chord tones, and rank them by 'gravitational' distance on the circle of fifths"""
         processed_notes = []
         for note in chord_notes:
-            processed_notes.append(self.handle_notes.get(note, note))
+            processed_notes.append(self.note_standardize().get(note, note))
         
         chord_root = processed_notes[0]
         results = []
@@ -1230,7 +1753,7 @@ class JazzBrain:
         
         # Iterate through all 12 major scales to find which one contains the most notes
         for root in self.cst.notes:
-            scale_notes = self.cst.get_scale_notes(root, self.cst.scale_definitions["Ionian (Major)"])
+            scale_notes = self.cst.get_scale_by_id("ionian")["intervals"]
             overlap = len(all_notes.intersection(scale_notes))
             if overlap > max_overlap:
                 max_overlap = overlap
